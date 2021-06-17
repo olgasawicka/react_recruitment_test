@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
-import "./App.css";
+import AppStyled from "./AppStyled";
 import ProductCart from "../ProductCart/ProductCart";
 
 const App = () => {
   const [data, setData] = useState(null);
   const [cart, setCart] = useState([]);
+  const [total, setTotal] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -12,13 +13,35 @@ const App = () => {
       const data = await response.json();
       setData(data);
     };
-
     fetchData();
   }, []);
 
-  if (!data) return <div>...Loading</div>;
+  useEffect(() => {
+    const updatedCart = data
+      ? data.map((product) =>
+          product.min > 0
+            ? { pid: product.pid, quantity: product.min }
+            : { pid: product.pid, quantity: 0 }
+        )
+      : [];
+    setCart([...updatedCart]);
+  }, [data]);
 
-  const addToCart = (newItem) => {
+  useEffect(() => {
+    const sumArr = cart.reduce((result, current) => {
+      const product = data.find(({ pid }) => pid === current.pid);
+      return product
+        ? [
+            ...result,
+            { pid: current.pid, sum: current.quantity * product.price },
+          ]
+        : result;
+    }, []);
+    const subtotal = sumArr.reduce((total, item) => item.sum + total, 0);
+    setTotal(subtotal);
+  }, [cart]);
+
+  const addQuantity = (newItem) => {
     const updatedCart = [...cart];
 
     const updatedItemIndex = updatedCart.findIndex(
@@ -36,44 +59,52 @@ const App = () => {
     setCart([...updatedCart]);
   };
 
-  const removeFromCart = (newItem) => {
-    const updatedCart = [...cart];
-    const updatedItemIndex = updatedCart.findIndex(
-      (item) => item.pid === newItem.pid
-    );
-    const updatedItem = { ...updatedCart[updatedItemIndex] };
-    updatedItem.quantity--;
-    if (updatedItem.quantity <= 0) {
-      updatedCart.splice(updatedItemIndex, 1);
-    } else {
-      updatedCart[updatedItemIndex] = updatedItem;
+  const removeQuantity = (newItem) => {
+    const product = data.find((product) => product.pid === newItem.pid);
+    const min = product ? product.min : 0;
+    const currentProduct = cart.find(({ pid }) => pid === newItem.pid);
+    const productsButCurrent = cart.filter(({ pid }) => pid !== newItem.pid);
+
+    if (currentProduct.quantity >= min) {
+      currentProduct.quantity--;
     }
 
-    setCart([...updatedCart]);
+    setCart([...productsButCurrent, currentProduct]);
   };
 
+  const resetQty = (pid, min) => {
+    const productIndex = cart.findIndex((product) => product.pid === pid);
+    if (productIndex > -1)
+      setCart([...cart, (cart[productIndex].quantity = min)]);
+  };
+
+  if (!data) return <div>...Loading</div>;
+
   return (
-    <div className="container">
+    <AppStyled>
       <h3>Lista produktów</h3>
       <ul>
         {data.map((product) => (
           <li key={product.pid} className="row">
-            {product.name}, cena: {product.price}zł
+            {product.name}, cena: {product.price} zł
             <ProductCart
-              product={product}
-              addToCart={addToCart}
-              removeFromCart={removeFromCart}
+              pid={product.pid}
+              min={product.min}
+              max={product.max}
+              isBlocked={product.isBlocked}
+              addQuantity={addQuantity}
+              removeQuantity={removeQuantity}
+              resetQty={resetQty}
               qty={
-                cart[cart.findIndex((el) => el.pid === product.pid)]
-                  ? cart[cart.findIndex((el) => el.pid === product.pid)]
-                      .quantity
-                  : 0
+                cart.length &&
+                cart[cart.findIndex((el) => el.pid === product.pid)].quantity
               }
             />
           </li>
         ))}
       </ul>
-    </div>
+      <div className="total">Suma zamówienia: {total && total.toFixed(2)}</div>
+    </AppStyled>
   );
 };
 

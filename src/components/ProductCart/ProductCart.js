@@ -1,16 +1,54 @@
-import React from "react";
+import React, { useEffect } from "react";
+import PropTypes from "prop-types";
 import ProductCartStyled from "./ProductCartStyled";
 import Button from "../common/Button/Button";
 
-const ProductCart = ({ product, addToCart, removeFromCart, qty }) => {
-  const { pid, min, max, isBlocked } = product;
+const ProductCart = ({
+  pid,
+  min,
+  max,
+  isBlocked,
+  addQuantity,
+  removeQuantity,
+  resetQty,
+  qty,
+}) => {
+  useEffect(
+    () =>
+      fetch("/api/product/check", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ pid: pid, quantity: qty }),
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          const errorTypes = ["INCORRECT_QUANTITY", "INCORRECT_TYPE"];
+          errorTypes.includes(data.errorType)
+            ? resetQty(pid, min)
+            : "or sth else";
+        })
+        .catch((error) => {
+          console.error("Error:", error);
+        }),
+    [qty]
+  );
+
+  const changeQty = (calcType) => {
+    if (calcType === "add") {
+      addQuantity({ pid });
+    } else {
+      removeQuantity({ pid });
+    }
+  };
 
   return (
     <ProductCartStyled>
-      <Button disabled={isBlocked} onClick={() => addToCart({ pid })}>
+      <Button disabled={isBlocked} onClick={() => changeQty("add")}>
         +
       </Button>
-      <Button disabled={isBlocked} onClick={() => removeFromCart({ pid })}>
+      <Button disabled={isBlocked} onClick={() => changeQty("remove")}>
         -
       </Button>
       <div className="qty">
@@ -18,6 +56,29 @@ const ProductCart = ({ product, addToCart, removeFromCart, qty }) => {
       </div>
     </ProductCartStyled>
   );
+};
+
+const { string, number, func, bool } = PropTypes;
+
+ProductCart.propTypes = {
+  pid: string.isRequired,
+  min: number,
+  max: number,
+  isBlocked: bool,
+  addQuantity: func,
+  removeQuantity: func,
+  resetQty: func,
+  qty: number,
+};
+
+ProductCart.defaultProps = {
+  min: 0,
+  max: 0,
+  isBlocked: false,
+  addQuantity: () => {},
+  removeQuantity: () => {},
+  resetQty: () => {},
+  qty: 0,
 };
 
 export default ProductCart;
