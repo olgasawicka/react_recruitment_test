@@ -20,7 +20,7 @@ const AppStyled = styled.div`
     font-size: 1.25rem;
     font-weight: bold;
     justify-content: flex-end;
-    padding-right: 1em;
+    padding: 1em;
   }
 `;
 

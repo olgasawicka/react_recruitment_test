@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import AppStyled from "./AppStyled";
+import Loader from "../common/Loader/Loader";
 import ProductCart from "../ProductCart/ProductCart";
 
 const App = () => {
@@ -28,16 +29,10 @@ const App = () => {
   }, [data]);
 
   useEffect(() => {
-    const sumArr = cart.reduce((result, current) => {
+    const subtotal = cart.reduce((total, current) => {
       const product = data.find(({ pid }) => pid === current.pid);
-      return product
-        ? [
-            ...result,
-            { pid: current.pid, sum: current.quantity * product.price },
-          ]
-        : result;
-    }, []);
-    const subtotal = sumArr.reduce((total, item) => item.sum + total, 0);
+      return product ? total + current.quantity * product.price : total;
+    }, 0);
     setTotal(subtotal);
   }, [cart]);
 
@@ -78,7 +73,7 @@ const App = () => {
       setCart([...cart, (cart[productIndex].quantity = min)]);
   };
 
-  if (!data) return <div>...Loading</div>;
+  if (!data) return <Loader />;
 
   return (
     <AppStyled>

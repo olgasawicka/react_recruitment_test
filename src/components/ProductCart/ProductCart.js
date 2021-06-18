@@ -1,6 +1,7 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import PropTypes from "prop-types";
 import ProductCartStyled from "./ProductCartStyled";
+import { debounce } from "lodash";
 import Button from "../common/Button/Button";
 
 const ProductCart = ({
@@ -13,27 +14,31 @@ const ProductCart = ({
   resetQty,
   qty,
 }) => {
-  useEffect(
-    () =>
-      fetch("/api/product/check", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ pid: pid, quantity: qty }),
+  const onQtyCheck = () => {
+    fetch("/api/product/check", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ pid: pid, quantity: qty }),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        const errorTypes = ["INCORRECT_QUANTITY", "INCORRECT_TYPE"];
+        errorTypes.includes(data.errorType)
+          ? resetQty(pid, min)
+          : "or sth else";
       })
-        .then((response) => response.json())
-        .then((data) => {
-          const errorTypes = ["INCORRECT_QUANTITY", "INCORRECT_TYPE"];
-          errorTypes.includes(data.errorType)
-            ? resetQty(pid, min)
-            : "or sth else";
-        })
-        .catch((error) => {
-          console.error("Error:", error);
-        }),
-    [qty]
-  );
+      .catch((error) => {
+        console.error("Error:", error);
+      });
+  };
+
+  const debouncedOnQtyCheck = useMemo(() => debounce(onQtyCheck, 500), [qty]);
+
+  useEffect(() => {
+    debouncedOnQtyCheck();
+  }, [qty]);
 
   const changeQty = (calcType) => {
     if (calcType === "add") {
